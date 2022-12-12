@@ -1,6 +1,5 @@
-from pantallas import Partida
+from scene_controler import SceneController
 
-juego = Partida()
+inicio = SceneController()
 
-juego.bucle_fotograma()
-
+inicio.start()

@@ -1,66 +1,257 @@
 import pygame as pg
 from figura_class import Pelota, Raqueta
-
-ANCHO = 800
-ALTO = 600
+from utils import *
 
 class Partida():
 
     def __init__(self):
         
-        pg.init()
         self.pantalla_inical = pg.display.set_mode( (ANCHO,ALTO) )
         pg.display.set_caption("P O N G")
         self.tasa_refresco = pg.time.Clock()
+        self.tasa_refresco.tick(FPS)
 
         self.pelota = Pelota(ANCHO//2,ALTO//2,vx=1,vy=1)
         self.raqueta1 = Raqueta(10,ALTO//2,vy=5)
         self.raqueta2 = Raqueta(ANCHO-10,ALTO//2,vy=5)
 
-        self.font = pg.font.Font(None, 30)
+        self.font = pg.font.Font("fonts/pressStart2P.ttf", 15)
+        self.fuenteTemp = pg.font.Font("fonts/pressStart2P.ttf",30) 
+        self.marcador1 = 0
+        self.marcador2 = 0
+        self.quienMarco = ""
+        self.temporizador = TIEMPO_LIMITE #en milisegundos 
+        self.colorFondo = VERDE  
+        self.contadorFotograma=0
 
     def bucle_fotograma(self):
 
-  
+            game_over = False
+
+            while not game_over and (self.marcador1<10 or self.marcador2<10) and self.temporizador > 0:
+
+                salto_tiempo = self.tasa_refresco.tick(FPS)#1000/60 = cantidad de fotograma por segundo pero en milisegundos
+                self.temporizador -= salto_tiempo
+            
+                
+
+                for evento in pg.event.get():
+                    if evento.type == pg.QUIT:
+                        game_over = True
+
+                self.raqueta1.mover(pg.K_w,pg.K_s)
+                self.raqueta2.mover(pg.K_UP,pg.K_DOWN)
+                self.quienMarco = self.pelota.mover()
+
+                if self.temporizador > SEGUNDO_AVISO and self.temporizador <= PRIMER_AVISO:
+                    self.pantalla_inical.fill(NARANJA)
+                elif self.temporizador <= SEGUNDO_AVISO:
+                    self.pantalla_inical.fill(ROJO)
+                else:
+                    self.pantalla_inical.fill(VERDE)  
+                
+                self.pantalla_inical.fill(self.fijar_fondo())
+
+
+
+                self.pelota.comprobar_choqueV2(self.raqueta2,self.raqueta1)
+
+                self.marcador()
+                self.linea_disc()
+            
+                tiempo = self.font.render( str( int(self.temporizador/1000) ),0, (0,0,0) )
+                self.pantalla_inical.blit(tiempo, (400, 20 ))
+            
+
+                self.pelota.dibujar(self.pantalla_inical)
+                self.raqueta1.dibujar(self.pantalla_inical)
+                self.raqueta2.dibujar(self.pantalla_inical)
+                self.mostrar_jugador()
+                
+                pg.display.flip()
+
+    
+
+
+    def linea_disc(self):
+        cont_linea1=0
+        cont_linea2=50
+
+        while cont_linea1 <= 560 and cont_linea2 <= 630:
+            pg.draw.line(self.pantalla_inical, BLANCO, (400,cont_linea1), (400,cont_linea2), width=10)
+            cont_linea1 += 70
+            cont_linea2 += 70
+
+    def mostrar_jugador(self):
+        jugador1 = self.font.render("Jugador 1",0, AMARILLO)
+        jugador2 = self.font.render( "Jugador 2",0, AMARILLO)
+        self.pantalla_inical.blit(jugador1, (155, 30))
+        self.pantalla_inical.blit(jugador2, (555, 30 ))
+
+    def marcador(self):
+        if self.quienMarco == "right":
+            self.marcador1 += 1
+        elif self.quienMarco == "left":
+            self.marcador2 += 1  
+        marcadorIzquierda = self.font.render(str( self.marcador2),0, AMARILLO)
+        marcadorDerecha = self.font.render( str(self.marcador1),0, AMARILLO)
+        self.pantalla_inical.blit(marcadorDerecha, (200, 50))
+        self.pantalla_inical.blit(marcadorIzquierda, (600, 50 ))
+
+    def fijar_fondo(self):
+         self.contadorFotograma +=1
+
+         if self.temporizador > PRIMER_AVISO:#no entra en ninguna condicion aun
+
+             self.contadorFotograma=0
+
+         elif self.temporizador > SEGUNDO_AVISO:#entra en la condicion que parpadee en naranja, 10 SEGUNDOS
+
+             if self.contadorFotograma == 30:
+                 if self.colorFondo == VERDE:
+                     self.colorFondo = NARANJA
+                 else:
+                     self.colorFondo = VERDE
+                 self.contadorFotograma = 0
+
+         else:# entra en la condicion que parpadee en rojo, 5 SEGUNDOS
+             if self.contadorFotograma == 30:
+                 if self.colorFondo == VERDE:
+                     self.colorFondo = ROJO
+                 else:
+                     self.colorFondo = VERDE
+                 self.contadorFotograma = 0
+
+         return self.colorFondo
+
+    def resultado_final(self):
+        if self.marcador1 > self.marcador2:
+            return f"Gana el Jugador 2, resultado Jugador1: {self.marcador2} Jugador2: {self.marcador1}"
+        elif self.marcador2 > self.marcador1:
+            return f"Gana el Jugador 1, resultado Jugador1: {self.marcador2} Jugador2: {self.marcador1}"
+        else:      
+            return f"Empate, resultado Jugador1: {self.marcador2} Jugador2: {self.marcador1}"
+
+
+class Menu:
+     def __init__(self):
+    
+         self.pantalla_principal = pg.display.set_mode( (ANCHO,ALTO) )
+         pg.display.set_caption("Menu")
+         self.tasa_refresco = pg.time.Clock()
+
+         self.imagenFondo = pg.image.load("images/portada.jpg")
+         self.fuenteMenu = pg.font.Font("fonts/pressStart2P.ttf", 20)
+
+     def bucle_pantalla(self):
+         game_over = False
+
+         while not game_over:
+             for evento in pg.event.get():
+                 if evento.type == pg.QUIT:
+                     game_over = True
+
+             if evento.type == pg.KEYDOWN:
+                 if evento.key == pg.K_RETURN:
+                     game_over = True
+                     return "jugar"          
+
+             self.pantalla_principal.blit(self.imagenFondo,(0,0))
+             menu = self.fuenteMenu.render("Pulsa ENTER para jugar",0,GRANATE)
+             self.pantalla_principal.blit(menu, (155,ALTO//2) )
+             pg.display.flip()
+
+class Menu:
+    def __init__(self):
+        
+        self.pantalla_principal = pg.display.set_mode( (ANCHO,ALTO) )
+        pg.display.set_caption("Menu")
+        self.tasa_refresco = pg.time.Clock()
+
+        self.imagenFondo = pg.image.load("images/portada.jpg")
+        self.fuenteMenu = pg.font.Font("fonts/pressStart2P.ttf", 20)
+
+    def bucle_pantalla(self):
         game_over = False
 
-
         while not game_over:
-
-            self.tasa_refresco.tick(280)
-
             for evento in pg.event.get():
                 if evento.type == pg.QUIT:
                     game_over = True
 
-            self.raqueta2.mover(pg.K_w,pg.K_s)
-            self.raqueta1.mover(pg.K_UP,pg.K_DOWN)
-            self.pelota.mover()
+                if evento.type == pg.KEYDOWN:#pulsa enter
+                    if evento.key == pg.K_RETURN:
+                        game_over = True#con esto cierra la ventaja de menu
+                    elif evento.key == pg.K_r:  
+                        game_over = True
+                         
 
-            self.pantalla_inical.fill((0,128,94))
-            self.pelota.comprobar_choqueV2(self.raqueta2,self.raqueta1)
-            self.pelota.marcador(self.pantalla_inical)
-
-            cont_linea1=0
-            cont_linea2=50
-            while cont_linea1 <= 560 and cont_linea2 <= 630:
-                pg.draw.line(self.pantalla_inical, (255,255,255), (400,cont_linea1), (400,cont_linea2), width=10)
-                cont_linea1 += 70
-                cont_linea2 += 70
-
-
-            self.pelota.dibujar(self.pantalla_inical)
-            self.raqueta1.dibujar(self.pantalla_inical)
-            self.raqueta2.dibujar(self.pantalla_inical)
-
-            self.mostrar_jugador()
-
+            self.pantalla_principal.blit(self.imagenFondo,(0,0))
+            jugar = self.fuenteMenu.render("Pulsa ENTER para jugar",0,GRANATE)
+            record = self.fuenteMenu.render("Pulsa R para ver records",0,GRANATE)
+            self.pantalla_principal.blit(jugar, (155,ALTO//2) )
+            self.pantalla_principal.blit(record, (155,ALTO//2.4) )
             pg.display.flip()
 
-        pg.quit() 
 
-    def mostrar_jugador(self):
-        jugador1 = self.font.render("Jugador 1",0, (255,255,0))
-        jugador2 = self.font.render( "Jugador 2",0, (255,255,0))
-        self.pantalla_inical.blit(jugador1, (200, 30))
-        self.pantalla_inical.blit(jugador2, (600, 30 ))
+class Resultado:
+    def __init__(self):
+        
+        self.pantalla_principal = pg.display.set_mode( (ANCHO,ALTO) )
+        pg.display.set_caption("Resultado")
+        self.tasa_refresco = pg.time.Clock()
+        self.fuenteResultado = pg.font.Font("fonts/pressStart2P.ttf", 12)
+        self.resultado = ""
+
+
+    def bucle_pantalla(self):
+        game_over = False
+
+        while not game_over:
+            for evento in pg.event.get():
+                if evento.type == pg.QUIT:
+                    game_over = True
+
+                if evento.type == pg.KEYDOWN:#pulsa enter
+                    if evento.key == pg.K_RETURN:
+                        game_over = True#con esto cierra la ventaja de resultado
+                        #return "jugar"#retorna          
+
+        
+            self.pantalla_principal.fill(BLANCO)
+            result = self.fuenteResultado.render(self.resultado,0,GRANATE)
+            self.pantalla_principal.blit(result, (135,ALTO//2) )
+            pg.display.flip()
+
+    def recibir_resultado(self,resultado):
+        self.resultado = resultado
+
+
+
+
+
+class Records:
+    def __init__(self):
+      
+        self.pantalla_principal = pg.display.set_mode( (ANCHO,ALTO) )
+        pg.display.set_caption("Records")
+        self.tasa_refresco = pg.time.Clock()
+        self.fuenteResultado = pg.font.Font("fonts/pressStart2P.ttf", 12)
+
+    def bucle_pantalla(self):
+        game_over = False
+
+        while not game_over:
+            for evento in pg.event.get():
+                if evento.type == pg.QUIT:
+                    game_over = True
+
+            if evento.type == pg.KEYDOWN:#pulsa enter
+                if evento.key == pg.K_RETURN:
+                    game_over = True#con esto cierra la ventaja de resultado        
+
+        
+            self.pantalla_principal.fill(BLANCO)
+            result = self.fuenteResultado.render("RECORDS",0,GRANATE)
+            self.pantalla_principal.blit(result, (135,ALTO//2) )
+            pg.display.flip()
