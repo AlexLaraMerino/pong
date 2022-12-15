@@ -10,9 +10,8 @@ class Pelota:
         self.color = color 
         self.vx = vx
         self.vy = vy
-        self.contadorDerecha = 0
-        self.contadorIzquierda = 0
         self.font = pg.font.Font(None, 40)
+        self.sonido = pg.mixer.Sound("songs/pelota.mp3")
 
 
     def dibujar(self, pantalla):
@@ -27,13 +26,9 @@ class Pelota:
         if self.pos_y >= (y_max - self.radio) or self.pos_y < (0 + self.radio): 
             self.vy *= -1
 
-        # El objetivo es que la pelote desaparezca en los límites y vuelva a aparecer 
-        # rebotando hacia el lado contrario de donde vino
 
         # Derecha
-        if self.pos_x >= (x_max + self.radio * 2): # Límite derecho
-
-            self.contadorIzquierda += 1
+        if self.pos_x >= (x_max + self.radio * 10): # Límite derecho
             self.pos_x = x_max//2
             self.pos_y = y_max//2
             self.vx *= -1
@@ -42,9 +37,7 @@ class Pelota:
             return "right"
 
         # Izquierda
-        if self.pos_x < (0 - self.radio * 2): # Límite izquierdo
-
-            self.contadorDerecha += 1
+        if self.pos_x < (0 - self.radio * 10): # Límite izquierdo
             self.pos_x = x_max//2
             self.pos_y = y_max//2
             self.vx *= -1
@@ -75,7 +68,10 @@ class Pelota:
             self.izquierda  <= r.derecha and \
             self.abajo >= r.arriba and\
             self.arriba <= r.abajo:
+
+                    self.sonido.play()
                     self.vx *= -1
+
                     break
 
 
@@ -91,20 +87,49 @@ class Raqueta:
         self.color = color
         self.vx = vx
         self.vy = vy
+        self.file_imagenes = {
+            "izqda":["electric00_izqda.png", "electric01_izqda.png", "electric02_izqda.png"],
+            "drcha":["electric00_drcha.png", "electric01_drcha.png", "electric02_drcha.png"]
+        }
+        self.imagenes = self.cargar_imagenes()
+        self._direccion = ""
+        self.imagen_activa = 0
+
+    def cargar_imagenes(self):
+        imagenprueba={}
+        for lado in self.file_imagenes:
+            imagenprueba[lado] = []
+            for nombre_fichero in self.file_imagenes[lado]:
+                fotos = pg.image.load(f"images/raquetas/{ nombre_fichero }")
+                imagenprueba[lado].append(fotos)
+        
+        return imagenprueba
+
+    @property
+    def direccion(self):
+        return self._direccion
+
+    @direccion.setter
+    def direccion(self, valor):
+        self._direccion = valor
+
 
     def dibujar(self,pantalla):
 
-        pg.draw.rect(pantalla,self.color,(self.pos_x-(self.w//2),self.pos_y-(self.h//2),self.w,self.h))
+        pantalla.blit(self.imagenes[self.direccion][self.imagen_activa],( self.pos_x-(self.w//2),self.pos_y-(self.h//2) , self.w, self.h ) )
+        self.imagen_activa += 1
+        if self.imagen_activa >= len(self.imagenes[self.direccion]) :
+            self.imagen_activa = 0
 
 
     def mover(self,tecla_arriba,tecla_abajo,y_max=600,y_min=0):
 
         estado_teclas = pg.key.get_pressed()
        
-        if estado_teclas[tecla_arriba] == True and self.pos_y > (y_min+self.h//2):
+        if estado_teclas[tecla_arriba] == True and self.pos_y > (y_min + self.h // 2):
             self.pos_y -= 1
 
-        if estado_teclas[tecla_abajo] == True and self.pos_y < (y_max-self.h//2) :
+        if estado_teclas[tecla_abajo] == True and self.pos_y < (y_max - self.h // 2) :
             self.pos_y += 1    
 
 
